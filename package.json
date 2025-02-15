@@ -1,0 +1,23 @@
+{
+  "name": "discord-budget-bot",
+  "version": "1.0.0",
+  "description": "### Features  - Core Features     - /create <budget_name><amount>: create budget      - /edit_name <new_budget_name>: update budget name      - /modify_amount: update budget amount     - /log <amount><budget_name>: to log that amount into the budget      - /left <budget_name>: to check how much you have left in your budget",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jadekam16/discord-budget-bot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jadekam16/discord-budget-bot/issues"
+  },
+  "homepage": "https://github.com/jadekam16/discord-budget-bot#readme",
+  "dependencies": {
+    "discord.js": "^14.18.0"
+  }
+}
