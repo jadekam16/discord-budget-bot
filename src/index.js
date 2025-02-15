@@ -1,6 +1,6 @@
-// index.js
 const Discord = require('discord.js');
 const sqlite3 = require('sqlite3').verbose();
+const { AttachmentBuilder, EmbedBuilder } = require('discord.js');
 require('dotenv').config();
 
 const client = new Discord.Client({
@@ -42,15 +42,28 @@ client.on("interactionCreate", async interaction => {
 
     case "view":
       const viewName = interaction.options.getString("name");
+      const underBudgetGifs = [
+        'src/assets/cat-cool.gif',
+        'src/assets/cute-cat-cat-cute.gif',
+        'src/assets/high-five-cat.gif',
+        'src/assets/proud-of-you.gif',
+        'src/assets/meme-maker-mememaker.gif'
+      ];
       
+      const overBudgetGifs = [
+        'src/assets/i-blew-the-budget-spent-it-all.mp4',
+        'src/assets/sad-cat-cat-in-front-of-sea.gif',
+        'src/assets/crying-cat-sad-cat.mp4'
+      ];
+
       db.get(
-        `SELECT b.*, 
+        `SELECT b.*,
                 SUM(e.amount) as total_spent,
                 (b.amount - COALESCE(SUM(e.amount), 0)) as remaining
-         FROM budgets b 
-         LEFT JOIN expenses e ON b.id = e.budget_id
-         WHERE b.name = ? AND b.userId = ?
-         GROUP BY b.id`,
+        FROM budgets b
+        LEFT JOIN expenses e ON b.id = e.budget_id
+        WHERE b.name = ? AND b.userId = ?
+        GROUP BY b.id`,
         [viewName, userId],
         (err, budget) => {
           if (err) {
@@ -61,7 +74,11 @@ client.on("interactionCreate", async interaction => {
             interaction.reply({content: 'Budget not found!', ephemeral: true});
             return;
           }
+
+          const gifList = budget.remaining >= 0 ? underBudgetGifs : overBudgetGifs;
+          const randomGif = gifList[Math.floor(Math.random() * gifList.length)];
           
+          const file = new AttachmentBuilder(randomGif);
           const embed = new Discord.EmbedBuilder()
             .setTitle(`Budget: ${budget.name}`)
             .setColor(0x0099FF)
@@ -69,9 +86,13 @@ client.on("interactionCreate", async interaction => {
               { name: 'Total Budget', value: `$${budget.amount}` },
               { name: 'Total Spent', value: `$${budget.total_spent || 0}` },
               { name: 'Remaining', value: `$${budget.remaining}` }
-            );
-          
-          interaction.reply({embeds: [embed]});
+            )
+            .setImage(`attachment://${randomGif.split('/').pop()}`);
+
+          interaction.reply({
+            embeds: [embed],
+            files: [file]
+          });
         }
       );
       break;
@@ -143,6 +164,89 @@ client.on("interactionCreate", async interaction => {
         }
       );
       break;
+
+      case "delete":
+        const deleteName = interaction.options.getString("name");
+        
+        // First check if the budget exists and belongs to the user
+        db.get(
+          'SELECT id FROM budgets WHERE name = ? AND userId = ?',
+          [deleteName, userId],
+          (err, budget) => {
+            if (err) {
+              interaction.reply({content: 'Error checking budget!', ephemeral: true});
+              return;
+            }
+            
+            if (!budget) {
+              interaction.reply({content: 'Budget not found or you don\'t have permission to delete it!', ephemeral: true});
+              return;
+            }
+
+            // Delete associated expenses first due to foreign key constraint
+            db.run(
+              'DELETE FROM expenses WHERE budget_id = ?',
+              [budget.id],
+              (err) => {
+                if (err) {
+                  interaction.reply({content: 'Error deleting expenses!', ephemeral: true});
+                  return;
+                }
+
+                // Then delete the budget
+                db.run(
+                  'DELETE FROM budgets WHERE id = ?',
+                  [budget.id],
+                  (err) => {
+                    if (err) {
+                      interaction.reply({content: 'Error deleting budget!', ephemeral: true});
+                      return;
+                    }
+                    
+                    interaction.reply({content: `Successfully deleted budget "${deleteName}" and all its expenses.`});
+                  }
+                );
+              }
+            );
+          }
+        );
+        break;
+
+      case "update":
+        const updateName = interaction.options.getString("name");
+        const newAmount = interaction.options.getNumber("amount");
+
+        // Check if the budget exists and belongs to the user
+        db.get(
+          'SELECT id FROM budgets WHERE name = ? AND userId = ?',
+          [updateName, userId],
+          (err, budget) => {
+            if (err) {
+              interaction.reply({content: 'Error checking budget!', ephemeral: true});
+              return;
+            }
+
+            if (!budget) {
+              interaction.reply({content: 'Budget not found or you don\'t have permission to update it!', ephemeral: true});
+              return;
+            }
+
+            // Update the budget amount
+            db.run(
+              'UPDATE budgets SET amount = ? WHERE id = ?',
+              [newAmount, budget.id],
+              (err) => {
+                if (err) {
+                  interaction.reply({content: 'Error updating budget!', ephemeral: true});
+                  return;
+                }
+
+                interaction.reply({content: `Successfully updated budget "${updateName}" to $${newAmount}`});
+              }
+            );
+          }
+        );
+        break;
   }
 });
 

@@ -66,6 +66,31 @@ const slashRegister = async () => {
                 .setName("description")
                 .setDescription("Description of the expense")
                 .setRequired(true)
+            ),
+          new SlashCommandBuilder()
+            .setName("delete")
+            .setDescription("Delete a budget and all its expenses")
+            .addStringOption(option =>
+              option
+                .setName("name")
+                .setDescription("The name of the budget to delete")
+                .setRequired(true)
+            ),
+          new SlashCommandBuilder()
+            .setName("update")
+            .setDescription("Update a budget amount")
+            .addStringOption(option =>
+              option
+                .setName("name")
+                .setDescription("The name of the budget to update")
+                .setRequired(true)
+            )
+            .addNumberOption(option =>
+              option
+                .setName("amount")
+                .setDescription("New budget amount")
+                .setRequired(true)
+                .setMinValue(0)
             )
         ]
       }
